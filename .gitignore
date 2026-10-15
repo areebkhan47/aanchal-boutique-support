@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+.env
+
+# React / Node.js
+node_modules/
+frontend/build/
+frontend/.env
+
+# Editor and operating system files
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Python testing
+.pytest_cache/
+.coverage
