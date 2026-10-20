@@ -21,3 +21,5 @@ Thumbs.db
 # Python testing
 .pytest_cache/
 .coverage
+
+backend/tickets.db
