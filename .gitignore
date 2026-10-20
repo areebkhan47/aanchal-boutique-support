@@ -22,4 +22,5 @@ Thumbs.db
 .pytest_cache/
 .coverage
 
+# Generated SQLite database
 backend/tickets.db
