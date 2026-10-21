@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import './App.css';
 
 function App() {
+  // Existing ticket dashboard state
   const [tickets, setTickets] = useState([]);
   const [page, setPage] = useState(1);
   const [size] = useState(10);
@@ -10,6 +11,14 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // AI similarity-search state
+  const [searchText, setSearchText] = useState('');
+  const [similarTickets, setSimilarTickets] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState('');
+  const [hasSearched, setHasSearched] = useState(false);
+
+  // Fetch paginated tickets
   useEffect(() => {
     const fetchTickets = async () => {
       setLoading(true);
@@ -43,6 +52,50 @@ function App() {
     fetchTickets();
   }, [page, size]);
 
+  // Search for similar historical tickets
+  const handleSimilarSearch = async (event) => {
+    event.preventDefault();
+
+    const query = searchText.trim();
+
+    if (!query) {
+      setSearchError('Please enter a support issue to search.');
+      setSimilarTickets([]);
+      setHasSearched(false);
+      return;
+    }
+
+    setSearchLoading(true);
+    setSearchError('');
+    setSimilarTickets([]);
+    setHasSearched(false);
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:8000/similar?text=${encodeURIComponent(query)}`
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          typeof data.detail === 'string'
+            ? data.detail
+            : 'Failed to search similar tickets.'
+        );
+      }
+
+      setSimilarTickets(data.results || []);
+      setHasSearched(true);
+    } catch (err) {
+      setSearchError(
+        `${err.message}. Please check that the backend is running.`
+      );
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
   return (
     <div className="app">
       <header className="header">
@@ -53,69 +106,160 @@ function App() {
       </header>
 
       <main className="main-content">
-        <h2>Customer Tickets</h2>
 
-        <p>Total tickets: {total}</p>
+        {/* AI Similarity Search */}
+        <section className="search-section">
+          <h2>AI Similar Ticket Search</h2>
 
-        {loading && <p>Loading tickets...</p>}
+          <p className="search-description">
+            Enter a customer issue to find the three most similar
+            past support tickets using AI.
+          </p>
 
-        {error && <p className="error">{error}</p>}
+          <form onSubmit={handleSimilarSearch} className="search-form">
+            <input
+              type="text"
+              value={searchText}
+              onChange={(event) => setSearchText(event.target.value)}
+              placeholder="Example: I need to exchange my dress for a larger size"
+              maxLength={1000}
+              aria-label="Search for similar support tickets"
+            />
 
-        {!loading && !error && (
-          <>
-            <div className="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Customer</th>
-                    <th>Subject</th>
-                    <th>Message</th>
-                    <th>Date</th>
-                  </tr>
-                </thead>
+            <button type="submit" disabled={searchLoading}>
+              {searchLoading ? 'Searching...' : 'Find Similar Tickets'}
+            </button>
+          </form>
 
-                <tbody>
-                  {tickets.map((ticket) => (
-                    <tr key={ticket.id}>
-                      <td>{ticket.id}</td>
-                      <td>{ticket.customer_name}</td>
-                      <td>{ticket.subject}</td>
-                      <td>
-                        {ticket.body.length > 100
-                          ? `${ticket.body.slice(0, 100)}...`
-                          : ticket.body}
-                      </td>
-                      <td>
-                        {new Date(ticket.date).toLocaleDateString()}
-                      </td>
-                    </tr>
+          {searchError && (
+            <p className="error">{searchError}</p>
+          )}
+
+          {searchLoading && (
+            <p className="loading-message">
+              AI is searching past support tickets...
+            </p>
+          )}
+
+          {hasSearched && !searchLoading && (
+            <div className="search-results">
+              <h3>Similar Past Tickets</h3>
+
+              {similarTickets.length === 0 ? (
+                <p>No similar tickets were found.</p>
+              ) : (
+                <div className="similar-ticket-list">
+                  {similarTickets.map((ticket) => (
+                    <article
+                      className="similar-ticket-card"
+                      key={ticket.id}
+                    >
+                      <div className="similar-ticket-heading">
+                        <h4>{ticket.subject}</h4>
+
+                        <span className="ticket-id">
+                          Ticket #{ticket.id}
+                        </span>
+                      </div>
+
+                      <p className="similar-ticket-customer">
+                        Customer: {ticket.customer_name}
+                      </p>
+
+                      <p className="similar-ticket-body">
+                        {ticket.body}
+                      </p>
+
+                      <div className="similarity-information">
+                        <span>Similarity score</span>
+
+                        <strong>
+                          {(
+                            ticket.similarity_score * 100
+                          ).toFixed(2)}%
+                        </strong>
+                      </div>
+                    </article>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              )}
             </div>
+          )}
+        </section>
 
-            <div className="pagination">
-              <button
-                onClick={() => setPage((current) => current - 1)}
-                disabled={page <= 1}
-              >
-                Previous
-              </button>
+        {/* Existing Ticket Dashboard */}
+        <section className="tickets-section">
+          <h2>Customer Tickets</h2>
 
-              <span>
-                Page {page} of {totalPages}
-              </span>
+          <p>Total tickets: {total}</p>
 
-              <button
-                onClick={() => setPage((current) => current + 1)}
-                disabled={page >= totalPages}
-              >
-                Next
-              </button>
-            </div>
-          </>
-        )}
+          {loading && <p>Loading tickets...</p>}
+
+          {error && <p className="error">{error}</p>}
+
+          {!loading && !error && (
+            <>
+              <div className="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Customer</th>
+                      <th>Subject</th>
+                      <th>Message</th>
+                      <th>Date</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {tickets.map((ticket) => (
+                      <tr key={ticket.id}>
+                        <td>{ticket.id}</td>
+                        <td>{ticket.customer_name}</td>
+                        <td>{ticket.subject}</td>
+                        <td>
+                          {ticket.body.length > 100
+                            ? `${ticket.body.slice(0, 100)}...`
+                            : ticket.body}
+                        </td>
+                        <td>
+                          {new Date(
+                            ticket.date
+                          ).toLocaleDateString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="pagination">
+                <button
+                  onClick={() =>
+                    setPage((current) => current - 1)
+                  }
+                  disabled={page <= 1}
+                >
+                  Previous
+                </button>
+
+                <span>
+                  Page {page} of {totalPages}
+                </span>
+
+                <button
+                  onClick={() =>
+                    setPage((current) => current + 1)
+                  }
+                  disabled={page >= totalPages}
+                >
+                  Next
+                </button>
+              </div>
+            </>
+          )}
+        </section>
+
       </main>
     </div>
   );
