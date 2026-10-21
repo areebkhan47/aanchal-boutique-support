@@ -24,3 +24,11 @@ Thumbs.db
 
 # Generated SQLite database
 backend/tickets.db
+
+# Generated database and similarity-search index
+backend/tickets.db
+backend/tickets.index
+backend/ticket_ids.npy
+
+# Python virtual environment
+backend/venv/
